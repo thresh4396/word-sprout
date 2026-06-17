@@ -86,6 +86,7 @@ def add_phrase(phrase_text, meaning, example="", tags=None):
     td["total_phrases_so_far"] = len(phrases)
     stats[today] = td
     save_daily_stats(stats)
+    sync_to_first_step()
     return p
 
 
@@ -96,6 +97,7 @@ def update_phrase(phrase_id, updates: dict):
         if p["id"] == phrase_id:
             p.update(updates)
             save_phrases(phrases)
+            sync_to_first_step()
             return p
     return None
 
@@ -105,6 +107,7 @@ def delete_phrase(phrase_id):
     phrases = get_phrases()
     phrases = [p for p in phrases if p["id"] != phrase_id]
     save_phrases(phrases)
+    sync_to_first_step()
 
 
 def get_phrase_by_id(phrase_id):
@@ -167,6 +170,7 @@ def record_review(phrase_id, quality):
     td["phrases_reviewed"] = td.get("phrases_reviewed", 0) + 1
     stats[today] = td
     save_daily_stats(stats)
+    sync_to_first_step()
 
 
 def record_review_session(mode, total, correct, duration_minutes=0):
@@ -189,6 +193,7 @@ def record_review_session(mode, total, correct, duration_minutes=0):
     td["review_sessions"] = td.get("review_sessions", 0) + 1
     stats[today_key()] = td
     save_daily_stats(stats)
+    sync_to_first_step()
 
 
 # ============================================================
@@ -217,6 +222,7 @@ def save_dialogue(dialogue_data):
     td["dialogues_generated"] = td.get("dialogues_generated", 0) + 1
     stats[today_key()] = td
     save_daily_stats(stats)
+    sync_to_first_step()
     return d
 
 

@@ -129,6 +129,13 @@ class MainWindow(QMainWindow):
                 page.build()
             self._theme_dirty.discard(idx)
 
+        # 数据展示页面每次切过来时自动刷新
+        DATA_PAGES = {0, 1, 2, 4}  # 仪表盘/词库/复习/统计
+        if idx in DATA_PAGES:
+            page = self.stack.widget(idx)
+            if page and hasattr(page, 'build') and idx not in self._theme_dirty:
+                page.build()
+
         if self.stack.currentIndex() != idx:
             overlay = _FadeWidget(self, QColor(T.BG))
             overlay.setGeometry(self.stack.geometry())
