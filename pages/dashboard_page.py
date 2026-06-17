@@ -18,9 +18,24 @@ class DashboardPage(QWidget):
     def __init__(self, main_window):
         super().__init__()
         self.mw = main_window
-        self.layout = QVBoxLayout(self)
+
+        # 外层布局（只放滚动区域）
+        page_lo = QVBoxLayout(self)
+        page_lo.setContentsMargins(0, 0, 0, 0)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+        content = QWidget()
+        content.setStyleSheet("background: transparent;")
+        self.layout = QVBoxLayout(content)
         self.layout.setContentsMargins(T.PAGE_MARGIN, 24, T.PAGE_MARGIN, 24)
         self.layout.setSpacing(T.PAGE_SPACING)
+
+        scroll.setWidget(content)
+        page_lo.addWidget(scroll)
         self.build()
 
     def build(self):
@@ -62,8 +77,9 @@ class DashboardPage(QWidget):
 
         for icon, label, value in stats_defs:
             stat_card = QFrame()
+            stat_card.setObjectName("statCard")
             stat_card.setStyleSheet(f"""
-                QFrame {{
+                QFrame#statCard {{
                     background: {T.CARD};
                     border: 1px solid {T.DIVIDER};
                     border-radius: {T.RADIUS}px;
@@ -135,8 +151,9 @@ class DashboardPage(QWidget):
         else:
             for p in today_phrases:
                 row = QFrame()
+                row.setObjectName("phraseRow")
                 row.setStyleSheet(f"""
-                    QFrame {{
+                    QFrame#phraseRow {{
                         background: {T.ELEVATED};
                         border-radius: {T.RADIUS_SM}px;
                         padding: 12px 16px;

@@ -26,11 +26,10 @@ def _clear_layout(lo):
         item = lo.takeAt(0)
         w = item.widget()
         if w is not None:
+            w.hide()
             w.deleteLater()
         elif item.layout() is not None:
             _clear_layout(item.layout())
-        if item.spacerItem():
-            lo.removeItem(item)
 
 
 # ============================================================
@@ -77,8 +76,9 @@ class Card(QFrame):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.setObjectName("card")
         self.setStyleSheet(f"""
-            QFrame {{
+            QFrame#card {{
                 background: {T.CARD};
                 border: 1px solid {T.DIVIDER};
                 border-radius: {T.RADIUS_LG}px;
