@@ -237,6 +237,8 @@ class PhraseRow(QFrame):
     """词库列表中的一行词组"""
 
     toggled = Signal(bool)  # 勾选/取消勾选
+    edit_requested = Signal(str)    # 请求编辑 → 传 phrase_id
+    delete_requested = Signal(str)  # 请求删除 → 传 phrase_id
 
     def __init__(self, phrase_data, show_checkbox=False, parent=None):
         super().__init__(parent)
@@ -300,6 +302,31 @@ class PhraseRow(QFrame):
         self.layout().addWidget(meaning_label, 1)
         self.layout().addWidget(tags_widget)
         self.layout().addWidget(status)
+
+        # ---- 编辑 / 删除按钮 ----
+        btn_style = f"""
+            QPushButton {{
+                background: transparent; border: 1px solid {T.DIVIDER};
+                border-radius: 14px; font-size: 14px;
+                min-width: 28px; max-width: 28px;
+                min-height: 28px; max-height: 28px;
+            }}
+            QPushButton:hover {{
+                background: {T.ELEVATED}; border-color: {T.GOLD};
+            }}
+        """
+
+        edit_btn = QPushButton("✏️")
+        edit_btn.setCursor(Qt.PointingHandCursor)
+        edit_btn.setStyleSheet(btn_style)
+        edit_btn.clicked.connect(lambda: self.edit_requested.emit(self.data["id"]))
+        self.layout().addWidget(edit_btn)
+
+        del_btn = QPushButton("🗑️")
+        del_btn.setCursor(Qt.PointingHandCursor)
+        del_btn.setStyleSheet(btn_style)
+        del_btn.clicked.connect(lambda: self.delete_requested.emit(self.data["id"]))
+        self.layout().addWidget(del_btn)
 
         self._update_bg()
 

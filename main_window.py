@@ -259,6 +259,28 @@ class MainWindow(QMainWindow):
     # ============================================================
 
     def open_add_phrase(self):
+        """打开录入页面（添加模式）"""
+        # 重建页面确保是干净的添加模式
+        from pages.add_phrase_page import AddPhrasePage
+        old = self.stack.widget(5)
+        new_page = AddPhrasePage(self)
+        self.stack.removeWidget(old)
+        if old:
+            old.deleteLater()
+        self.pages[5] = new_page
+        self.stack.insertWidget(5, new_page)
+        self.show_page(5)
+
+    def open_edit_phrase(self, phrase_id):
+        """打开录入页面（编辑模式）"""
+        from pages.add_phrase_page import AddPhrasePage
+        old = self.stack.widget(5)
+        edit_page = AddPhrasePage(self, edit_phrase_id=phrase_id)
+        self.stack.removeWidget(old)
+        if old:
+            old.deleteLater()
+        self.pages[5] = edit_page
+        self.stack.insertWidget(5, edit_page)
         self.show_page(5)
 
     def go_to_review(self):

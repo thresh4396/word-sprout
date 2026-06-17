@@ -12,7 +12,7 @@ from PySide6.QtGui import QFont
 
 from config import T
 from widgets.base import GoldBtn, GhostBtn, TagChip, PhraseRow, Card, _clear_layout
-from data_manager import get_phrases, get_all_tags
+from data_manager import get_phrases, get_all_tags, delete_phrase, get_phrase_by_id
 
 
 class BrowsePage(QWidget):
@@ -175,6 +175,8 @@ class BrowsePage(QWidget):
         for p in phrases:
             row = PhraseRow(p, show_checkbox=True)
             row.toggled.connect(lambda checked, pid=p["id"]: self._on_toggle(pid, checked))
+            row.edit_requested.connect(lambda pid=p["id"]: self._on_edit(pid))
+            row.delete_requested.connect(lambda pid=p["id"]: self._on_delete(pid))
             row.cb.setChecked(p["id"] in self._selected_ids)
             row._checked = p["id"] in self._selected_ids
             row._update_bg()
@@ -191,6 +193,28 @@ class BrowsePage(QWidget):
         self._update_result_label()
         self._update_dialogue_btn()
         self.selection_changed.emit()
+
+    def _on_edit(self, phrase_id):
+        """打开编辑页面"""
+        self.mw.open_edit_phrase(phrase_id)
+
+    def _on_delete(self, phrase_id):
+        """确认后删除词组"""
+        p = get_phrase_by_id(phrase_id)
+        if not p:
+            return
+        from PySide6.QtWidgets import QMessageBox
+        reply = QMessageBox.question(
+            self, "确认删除",
+            f"确定要删除「{p['phrase']}」吗？\n\n释义：{p['meaning']}\n\n此操作不可撤销。",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+        if reply == QMessageBox.Yes:
+            delete_phrase(phrase_id)
+            self.mw.toast(f"已删除「{p['phrase']}」")
+            self._refresh_tags()
+            self._refresh_list()
 
     def _update_result_label(self):
         phrases = self._filtered_phrases()
