@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QTimer
 
-from config import T
+from config import T, text_on_accent
 from widgets.base import GoldBtn, GhostBtn, _clear_layout
 from widgets.flashcard import FlashCardWidget
 from widgets.quiz_panel import QuizPanelWidget
@@ -126,7 +126,7 @@ class ReviewPage(QWidget):
     def _update_mode_btns(self):
         active_style = f"""
             QPushButton {{
-                background: {T.GOLD}; color: #fff; border: none;
+                background: {T.GOLD}; color: {text_on_accent()}; border: none;
                 border-radius: 22px; padding: 10px 24px;
                 font-size: {T.BODY}px; font-weight: 700;
             }}

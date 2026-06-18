@@ -11,7 +11,8 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, Signal, Property, QEasingCurve, QPropertyAnimation
 from PySide6.QtGui import QPainter, QColor, QFont, QCursor
 
-from config import T
+from config import T, text_on_accent
+from review_engine import get_mastery_level, get_mastery_tier_info
 
 
 # ============================================================
@@ -100,7 +101,7 @@ class GoldBtn(QPushButton):
         self.setStyleSheet(f"""
             QPushButton {{
                 background: {T.GOLD};
-                color: #fff;
+                color: {text_on_accent()};
                 border: none;
                 border-radius: 50px;
                 padding: 14px 36px;
@@ -204,7 +205,7 @@ class TagChip(QLabel):
     def update_style(self):
         if self._active:
             bg = T.GOLD
-            fg = "#fff"
+            fg = text_on_accent()
         else:
             bg = T.TAG_BG
             fg = T.TAG_TEXT
@@ -291,17 +292,57 @@ class PhraseRow(QFrame):
             tags_lo.addWidget(chip)
         tags_lo.addStretch()
 
-        # 状态指示
-        if self.data.get("mastered"):
-            status = QLabel("✓")
-            status.setStyleSheet(f"color: {T.GOLD}; font-size: 18px; font-weight: bold;")
-        else:
-            status = QLabel("")
+        # ── 掌握程度指示器 ──
+        tier_info = get_mastery_tier_info(self.data)
+        level = get_mastery_level(self.data)
+        rc = self.data.get("review_count", 0)
+        cc = self.data.get("correct_count", 0)
+        ef = self.data.get("ef", 2.5)
+        interval = self.data.get("interval_days", 0)
+        next_rev = self.data.get("next_review", "")
+        rate = (cc / rc * 100) if rc > 0 else 0
+        consec_c = self.data.get("consecutive_correct", 0)
+        consec_w = self.data.get("consecutive_wrong", 0)
+
+        status_widget = QWidget()
+        status_lo = QHBoxLayout(status_widget)
+        status_lo.setContentsMargins(0, 0, 0, 0)
+        status_lo.setSpacing(5)
+
+        # 彩色圆点
+        dot = QLabel("●")
+        dot.setStyleSheet(f"color: {tier_info['dot_color']}; font-size: 12px; background: transparent; border: none;")
+        dot.setFixedWidth(16)
+        status_lo.addWidget(dot)
+
+        # 等级文字
+        level_color = T.GOLD if level == "tree" else ("#e6a23c" if level == "sprout" else T.TEXT_MUTED)
+        level_label = QLabel(tier_info["label"])
+        level_label.setStyleSheet(f"font-size: {T.SMALL}px; font-weight: 600; color: {level_color}; background: transparent; border: none;")
+        status_lo.addWidget(level_label)
+
+        # 复习次数
+        count_label = QLabel(f"×{rc}")
+        count_label.setStyleSheet(f"font-size: {T.SMALL - 1}px; color: {T.TEXT_MUTED}; background: transparent; border: none;")
+        status_lo.addWidget(count_label)
+
+        # Tooltip 详细数据
+        tooltip_parts = [
+            f"等级: {tier_info['label']} {tier_info['icon']}",
+            f"EF: {ef:.2f}",
+            f"间隔: {interval} 天",
+            f"下次复习: {next_rev}",
+            f"正确率: {rate:.0f}% ({cc}/{rc})",
+            f"连续正确: {consec_c} 次",
+        ]
+        if consec_w > 0:
+            tooltip_parts.append(f"连续出错: {consec_w} 次")
+        status_widget.setToolTip("\n".join(tooltip_parts))
 
         self.layout().addWidget(phrase_label)
         self.layout().addWidget(meaning_label, 1)
         self.layout().addWidget(tags_widget)
-        self.layout().addWidget(status)
+        self.layout().addWidget(status_widget)
 
         # ---- 编辑 / 删除按钮 ----
         btn_style = f"""

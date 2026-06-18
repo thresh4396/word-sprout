@@ -5,7 +5,7 @@ SM-2 间隔重复算法 + 选择题干扰项生成
 
 import random
 from datetime import date, timedelta
-from config import SM2_DEFAULT_EF, SM2_MIN_EF, SM2_MAX_EF, MASTERY_CORRECT_MIN, MASTERY_RATIO
+from config import SM2_DEFAULT_EF, SM2_MIN_EF, SM2_MAX_EF, MASTERY_CORRECT_MIN, MASTERY_RATIO, MASTERY_INTERVAL_MIN, MASTERY_TIERS
 
 
 def calculate_next_review(phrase, quality):
@@ -36,22 +36,41 @@ def calculate_next_review(phrase, quality):
         ef = ef + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02))
         ef = max(SM2_MIN_EF, min(SM2_MAX_EF, ef))
     else:
-        # 失败：重置间隔
+        # 失败：重置间隔并降低 EF（标准 SM-2）
         interval = 1
+        ef = ef - 0.2
+        ef = max(SM2_MIN_EF, ef)
 
     phrase["ef"] = round(ef, 2)
     phrase["interval_days"] = interval
     phrase["review_count"] = phrase.get("review_count", 0) + 1
     if quality >= 3:
         phrase["correct_count"] = phrase.get("correct_count", 0) + 1
+
+    # 连续正确/错误追踪
+    consec_correct = phrase.get("consecutive_correct", 0)
+    consec_wrong = phrase.get("consecutive_wrong", 0)
+    if quality >= 3:
+        consec_correct += 1
+        consec_wrong = 0
+    else:
+        consec_wrong += 1
+        consec_correct = 0
+    phrase["consecutive_correct"] = consec_correct
+    phrase["consecutive_wrong"] = consec_wrong
+
     phrase["last_reviewed"] = date.today().isoformat()
     phrase["next_review"] = (date.today() + timedelta(days=interval)).isoformat()
 
-    # 判断掌握
+    # 判断掌握（需要：足够次数 + 足够正确率 + 足够间隔）
     rc = phrase["correct_count"]
     cc = phrase["review_count"]
-    phrase["mastered"] = (rc >= MASTERY_CORRECT_MIN and cc >= MASTERY_CORRECT_MIN
-                          and (rc / cc) >= MASTERY_RATIO)
+    phrase["mastered"] = (
+        rc >= MASTERY_CORRECT_MIN
+        and cc >= MASTERY_CORRECT_MIN
+        and (rc / cc) >= MASTERY_RATIO
+        and interval >= MASTERY_INTERVAL_MIN
+    )
 
     return phrase
 
@@ -70,11 +89,38 @@ def get_due_count(phrases):
 
 
 def get_mastery_rate(phrases):
-    """计算掌握率"""
+    """计算掌握率（tree 等级占比）"""
     if not phrases:
         return 0.0
-    mastered = sum(1 for p in phrases if p.get("mastered"))
+    mastered = sum(1 for p in phrases if get_mastery_level(p) == "tree")
     return mastered / len(phrases)
+
+
+def get_mastery_level(phrase):
+    """
+    返回掌握等级
+    - "seedling": review_count < 2
+    - "sprout": review_count >= 2 且未达到 tree 条件
+    - "tree": review_count >= 5, correct_rate >= 80%, interval >= 21 天
+    """
+    rc = phrase.get("review_count", 0)
+    if rc < 2:
+        return "seedling"
+
+    cc = phrase.get("correct_count", 0)
+    if rc >= MASTERY_CORRECT_MIN and cc >= MASTERY_CORRECT_MIN:
+        rate = cc / rc if rc > 0 else 0
+        interval = phrase.get("interval_days", 0)
+        if rate >= MASTERY_RATIO and interval >= MASTERY_INTERVAL_MIN:
+            return "tree"
+
+    return "sprout"
+
+
+def get_mastery_tier_info(phrase):
+    """返回给定词组的掌握等级信息 dict"""
+    level = get_mastery_level(phrase)
+    return MASTERY_TIERS[level]
 
 
 def generate_quiz_options(correct_phrase, all_phrases, n=4):

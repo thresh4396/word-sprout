@@ -11,7 +11,7 @@ from PySide6.QtGui import QFont
 from config import T
 from widgets.base import GoldBtn, GhostBtn, Card, _clear_layout
 from data_manager import get_today_stats, get_phrases
-from review_engine import get_due_count
+from review_engine import get_due_count, get_mastery_level
 
 
 class DashboardPage(QWidget):
@@ -70,7 +70,7 @@ class DashboardPage(QWidget):
         stats_defs = [
             ("📝", "今日录入", str(stats["phrases_added"])),
             ("🔄", "待复习", str(due)),
-            ("💡", "已掌握", str(sum(1 for p in get_phrases() if p.get("mastered")))),
+            ("💡", "已掌握", str(sum(1 for p in get_phrases() if get_mastery_level(p) == "tree"))),
             ("📚", "总词库", str(len(get_phrases()))),
             ("💬", "今日对话", str(stats["dialogues_generated"])),
         ]

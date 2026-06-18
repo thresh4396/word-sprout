@@ -45,6 +45,7 @@ class StatsPage(QWidget):
     def build(self):
         _clear_layout(self.layout)
 
+        # ── 标题 ──
         title = QLabel("学习统计")
         title.setStyleSheet(f"""
             font-family: "{T.FONT_DISPLAY}"; font-size: {T.H1}px;
@@ -56,15 +57,17 @@ class StatsPage(QWidget):
         mastery = get_mastery_rate(phrases)
         due = get_due_count(phrases)
 
-        # ===== 概览卡片行 =====
+        # ── 概览卡片行：掌握率 + 数据 ──
         overview = QHBoxLayout()
         overview.setSpacing(16)
 
         # 环形掌握率
         ring_card = Card()
+        ring_card.setMinimumWidth(220)
         ring_lo = QVBoxLayout(ring_card)
         ring_lo.setAlignment(Qt.AlignCenter)
-        ring = RingProgress(size=150, thickness=14)
+        ring_lo.setSpacing(12)
+        ring = RingProgress(size=140, thickness=12)
         ring.setProgress(mastery)
         ring_lo.addWidget(ring, alignment=Qt.AlignCenter)
         ring_label = QLabel("掌握率")
@@ -76,7 +79,7 @@ class StatsPage(QWidget):
         # 数字统计卡
         num_card = Card()
         num_lo = QVBoxLayout(num_card)
-        num_lo.setSpacing(14)
+        num_lo.setSpacing(16)
 
         stats_items = [
             ("总词库", len(phrases)),
@@ -98,39 +101,50 @@ class StatsPage(QWidget):
         overview.addWidget(num_card, 1)
         self.layout.addLayout(overview)
 
-        # ===== 周统计图 =====
+        # ── 周统计图 ──
         chart_card = Card()
         chart_lo = QVBoxLayout(chart_card)
+        chart_lo.setContentsMargins(8, 8, 8, 8)
+        chart_lo.setSpacing(0)
         weekly_data = self._get_weekly_data()
         chart = WeeklyChart(weekly_data)
         chart_lo.addWidget(chart)
         self.layout.addWidget(chart_card)
 
-        # ===== 标签分布 =====
+        # ── 标签分布 ──
         tags = get_all_tags()
         if tags:
             tag_card = Card()
             tag_lo = QVBoxLayout(tag_card)
-            tag_lo.addWidget(QLabel("标签分布"))
-            tag_lo.widget(0).setStyleSheet(f"font-size: {T.H3}px; font-weight: 700; color: {T.TEXT}; background: transparent; border: none;")
+            tag_lo.setSpacing(12)
+            tag_title = QLabel("标签分布")
+            tag_title.setStyleSheet(f"font-size: {T.H3}px; font-weight: 700; color: {T.TEXT}; background: transparent; border: none;")
+            tag_lo.addWidget(tag_title)
 
             from widgets.base import TagChip
-            tags_row = QHBoxLayout()
-            tags_row.setSpacing(8)
-            phrase_count = len(phrases)
+            from PySide6.QtWidgets import QFrame
+            tags_container = QFrame()
+            tags_container.setStyleSheet(f"background: transparent; border: none;")
+            tags_flow = QHBoxLayout(tags_container)
+            tags_flow.setContentsMargins(0, 0, 0, 0)
+            tags_flow.setSpacing(8)
             for tag in tags[:12]:
                 count = sum(1 for p in phrases if tag in p.get("tags", []))
                 chip = TagChip(f"{tag} ({count})")
-                tags_row.addWidget(chip)
-            tags_row.addStretch()
-            tag_lo.addLayout(tags_row)
+                tags_flow.addWidget(chip)
+            tags_flow.addStretch()
+            tag_lo.addWidget(tags_container)
 
             self.layout.addWidget(tag_card)
 
-        # ===== 导出按钮 =====
+        # ── 数据导出 ──
         export_card = Card()
         exp_lo = QHBoxLayout(export_card)
-        exp_lo.addWidget(QLabel("数据导出"))
+        exp_lo.setSpacing(16)
+        exp_label = QLabel("数据导出")
+        exp_label.setStyleSheet(f"font-size: {T.H3}px; font-weight: 700; color: {T.TEXT}; background: transparent; border: none;")
+        exp_lo.addWidget(exp_label)
+        exp_lo.addSpacing(20)
 
         export_json_btn = GhostBtn("导出 JSON")
         export_json_btn.clicked.connect(self._export_json)

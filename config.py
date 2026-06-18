@@ -77,9 +77,32 @@ DEFAULT_SETTINGS = {
 # ---- SM-2 算法参数 ----
 SM2_DEFAULT_EF = 2.5
 SM2_MIN_EF = 1.3
-SM2_MAX_EF = 2.5
+SM2_MAX_EF = 3.0          # 标准 SM-2 最大值（之前 2.5=初始值导致 EF 永不增长）
 MASTERY_CORRECT_MIN = 5
 MASTERY_RATIO = 0.8
+MASTERY_INTERVAL_MIN = 21  # 掌握至少需要的间隔天数
+
+# ---- 掌握等级分层 ----
+MASTERY_TIERS = {
+    "seedling": {
+        "key": "seedling",
+        "label": "新学",
+        "icon": "✨",
+        "dot_color": "#bdbdbd",
+    },
+    "sprout": {
+        "key": "sprout",
+        "label": "学习中",
+        "icon": "🌿",
+        "dot_color": "#e6a23c",
+    },
+    "tree": {
+        "key": "tree",
+        "label": "已掌握",
+        "icon": "🌳",
+        "dot_color": "#2ecc71",
+    },
+}
 
 # ---- 复习质量映射 ----
 QUALITY_LABELS = {
@@ -103,6 +126,7 @@ class T:
     GOLD = "#2ecc71"
     GOLD_DIM = "#27ae60"
     CORAL = "#e67e22"
+    HIGHLIGHT = "#d4696e"
     TEXT = "#1a2e23"
     TEXT_DIM = "#5a7a6a"
     TEXT_MUTED = "#8aaa9a"
@@ -121,6 +145,7 @@ class T:
     # 字体
     FONT_DISPLAY = "Noto Serif SC"
     FONT_BODY = "Noto Sans SC"
+    FONT_EN = "Times New Roman"
 
     # 圆角
     RADIUS = 16
@@ -153,6 +178,7 @@ THEMES = {
     "薄荷": {
         "BG": "#f0f7f4", "CARD": "#ffffff", "ELEVATED": "#e8f2ec",
         "GOLD": "#2ecc71", "GOLD_DIM": "#27ae60", "CORAL": "#e67e22",
+        "HIGHLIGHT": "#d4696e",
         "TEXT": "#1a2e23", "TEXT_DIM": "#5a7a6a", "TEXT_MUTED": "#8aaa9a",
         "SAGE": "#1abc9c", "DIVIDER": "#d8e8e0",
         "CORRECT_BG": "#d4edda", "CORRECT_TEXT": "#155724",
@@ -162,6 +188,7 @@ THEMES = {
     "海盐": {
         "BG": "#f5f7fa", "CARD": "#ffffff", "ELEVATED": "#edf1f5",
         "GOLD": "#5b8def", "GOLD_DIM": "#4a7ad4", "CORAL": "#e85d75",
+        "HIGHLIGHT": "#e8734a",
         "TEXT": "#1a2530", "TEXT_DIM": "#5a6c7a", "TEXT_MUTED": "#8a9aaa",
         "SAGE": "#3cb8a9", "DIVIDER": "#dde3ea",
         "CORRECT_BG": "#d4edf0", "CORRECT_TEXT": "#0c5460",
@@ -171,6 +198,7 @@ THEMES = {
     "樱草": {
         "BG": "#fefcf5", "CARD": "#ffffff", "ELEVATED": "#faf5e8",
         "GOLD": "#e8a817", "GOLD_DIM": "#c88a10", "CORAL": "#d4695a",
+        "HIGHLIGHT": "#2e86ab",
         "TEXT": "#2a2218", "TEXT_DIM": "#6b5c48", "TEXT_MUTED": "#9b8c78",
         "SAGE": "#6b9b4a", "DIVIDER": "#ece0d0",
         "CORRECT_BG": "#e8f5e0", "CORRECT_TEXT": "#3c5a1e",
@@ -180,6 +208,7 @@ THEMES = {
     "暮紫": {
         "BG": "#1a1a24", "CARD": "#242430", "ELEVATED": "#2e2e3c",
         "GOLD": "#a78bfa", "GOLD_DIM": "#8b6fe0", "CORAL": "#f472b6",
+        "HIGHLIGHT": "#e2b04a",
         "TEXT": "#e8e0f0", "TEXT_DIM": "#9888b0", "TEXT_MUTED": "#685878",
         "SAGE": "#6ee7b7", "DIVIDER": "#333040",
         "CORRECT_BG": "#1a3a2a", "CORRECT_TEXT": "#8ae0a8",
@@ -203,6 +232,18 @@ def apply_theme(name):
 
 def get_current_theme():
     return _current_theme
+
+
+def text_on_accent():
+    """
+    返回适合在 T.GOLD 背景上显示的文字颜色。
+    根据 T.GOLD 亮度自动选择，保证所有主题下的对比度。
+    """
+    hex_color = T.GOLD.lstrip("#")
+    r, g, b = int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16)
+    # W3C 相对亮度
+    luminance = 0.299 * r + 0.587 * g + 0.114 * b
+    return "#1a1a1a" if luminance > 150 else "#ffffff"
 
 
 def qss():

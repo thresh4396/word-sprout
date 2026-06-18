@@ -6,7 +6,7 @@ from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushBu
 from PySide6.QtCore import Qt, Signal, QTimer
 from PySide6.QtGui import QFont, QColor
 
-from config import T
+from config import T, QUALITY_LABELS
 from review_engine import generate_quiz_options
 
 
@@ -130,5 +130,44 @@ class QuizPanelWidget(QWidget):
             self.feedback_lbl.setStyleSheet(f"font-size: {T.H3}px; font-weight: 700; color: {T.CORAL}; background: transparent; border: none;")
         self.feedback_lbl.show()
 
-        quality = 4 if correct else 1
+        # ── 质量评级按钮 ──
+        rating_row = QWidget()
+        r_lo = QHBoxLayout(rating_row)
+        r_lo.setSpacing(10)
+        r_lo.setAlignment(Qt.AlignCenter)
+
+        hint = QLabel("你的记忆程度？")
+        hint.setStyleSheet(f"font-size: {T.CAPTION}px; color: {T.TEXT_MUTED}; background: transparent; border: none;")
+        r_lo.addWidget(hint)
+
+        color_map = {0: T.CORAL, 2: "#e6a23c", 4: T.SAGE, 5: T.GOLD}
+        for q in [0, 2, 4, 5]:
+            label, desc = QUALITY_LABELS[q]
+            btn = QPushButton(label)
+            btn.setToolTip(desc)
+            btn.setCursor(Qt.PointingHandCursor)
+            btn.setMinimumWidth(80)
+            btn.setMinimumHeight(40)
+            c = color_map[q]
+            btn.setStyleSheet(f"""
+                QPushButton {{
+                    background: rgba({QColor(c).red()},{QColor(c).green()},{QColor(c).blue()},0.15);
+                    color: {c};
+                    border: 1px solid rgba({QColor(c).red()},{QColor(c).green()},{QColor(c).blue()},0.4);
+                    border-radius: 20px;
+                    font-size: {T.CAPTION}px; font-weight: 600;
+                }}
+                QPushButton:hover {{
+                    background: rgba({QColor(c).red()},{QColor(c).green()},{QColor(c).blue()},0.30);
+                }}
+            """)
+            btn.clicked.connect(lambda checked, v=q: self._emit_answer(correct, v))
+            r_lo.addWidget(btn)
+
+        self.layout().addWidget(rating_row)
+        self._rating_row = rating_row
+
+    def _emit_answer(self, correct, quality):
+        if hasattr(self, '_rating_row'):
+            self._rating_row.hide()
         self.answered.emit(correct, quality)

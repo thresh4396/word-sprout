@@ -4,22 +4,20 @@
 """
 
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel
-from PySide6.QtCore import Qt, QRectF
+from PySide6.QtCore import Qt, QRectF, QPointF
 from PySide6.QtGui import QPainter, QColor, QPen, QFont, QLinearGradient
 
 from config import T
 
 
 class BarChart(QWidget):
-    """简易柱状图，用于近7天统计"""
+    """柱状图，用于近7天统计（录入 + 复习双柱）"""
 
     def __init__(self, data, parent=None):
-        """
-        data: [{"label": "6/11", "added": 3, "reviewed": 8}, ...]
-        """
         super().__init__(parent)
         self._data = data
-        self.setMinimumHeight(200)
+        self.setMinimumHeight(280)
+        self.setStyleSheet(f"background: transparent;")
 
     def paintEvent(self, e):
         p = QPainter(self)
@@ -30,55 +28,74 @@ class BarChart(QWidget):
             p.end()
             return
 
-        # 找出最大值
+        bar_count = len(self._data)
+        padding_top = 30      # 顶部留白
+        padding_bottom = 56   # 底部留白给日期标签
+        left_margin = 52
+        right_margin = 32
+        chart_w = w - left_margin - right_margin
+        chart_h = h - padding_top - padding_bottom
+
         max_val = max(max(d.get("added", 0), d.get("reviewed", 0)) for d in self._data)
         max_val = max(max_val, 1)
 
-        bar_count = len(self._data)
-        bar_w = (w - 80) / (bar_count * 2 + bar_count * 0.5)
-        gap = bar_w * 0.5
-        left_margin = 60
-        bottom_margin = 40
-        chart_h = h - bottom_margin - 10
+        # 竖线刻度背景
+        p.setPen(QPen(QColor(T.DIVIDER), 1, Qt.DashLine))
+        for i in range(5):
+            y = padding_top + chart_h * i / 4
+            p.drawLine(QPointF(left_margin, y), QPointF(w - right_margin, y))
+
+        # 每组两柱，柱间留足间距
+        group_w = chart_w / bar_count        # 每组占宽
+        bar_w = group_w * 0.22               # 单柱宽度（更细）
+        pair_gap = group_w * 0.16            # 录入/复习两柱间距（更宽）
 
         for i, d in enumerate(self._data):
-            x_base = left_margin + i * (bar_w * 2 + gap + bar_w * 0.5)
+            group_center = left_margin + group_w * i + group_w / 2
+            bar1_x = group_center - bar_w - pair_gap / 2
+            bar2_x = group_center + pair_gap / 2
 
-            # added 柱子
-            added_h = (d.get("added", 0) / max_val) * chart_h
-            added_rect = QRectF(x_base, h - bottom_margin - added_h, bar_w, added_h)
-            p.setPen(Qt.NoPen)
-            p.setBrush(QColor(T.GOLD))
-            p.drawRoundedRect(added_rect, 4, 4)
+            # 录入柱（金色）
+            added_val = d.get("added", 0)
+            added_h = (added_val / max_val) * chart_h if added_val > 0 else 0
+            if added_h > 0:
+                added_rect = QRectF(bar1_x, padding_top + chart_h - added_h, bar_w, added_h)
+                p.setPen(Qt.NoPen)
+                p.setBrush(QColor(T.GOLD))
+                p.drawRoundedRect(added_rect, 5, 5)
 
-            # reviewed 柱子
-            review_h = (d.get("reviewed", 0) / max_val) * chart_h
-            review_rect = QRectF(x_base + bar_w + 4, h - bottom_margin - review_h, bar_w, review_h)
-            p.setBrush(QColor(T.SAGE))
-            p.drawRoundedRect(review_rect, 4, 4)
+            # 复习柱（蓝色，与金色形成对比）
+            review_val = d.get("reviewed", 0)
+            review_h = (review_val / max_val) * chart_h if review_val > 0 else 0
+            if review_h > 0:
+                review_rect = QRectF(bar2_x, padding_top + chart_h - review_h, bar_w, review_h)
+                p.setPen(Qt.NoPen)
+                p.setBrush(QColor("#5b9ec4"))
+                p.drawRoundedRect(review_rect, 5, 5)
 
-            # 标签
+            # 日期标签
             p.setPen(QColor(T.TEXT_MUTED))
             font = QFont(T.FONT_BODY, 11)
             p.setFont(font)
-            label_w = bar_w * 2 + 4
-            p.drawText(
-                QRectF(x_base, h - bottom_margin + 4, label_w, 20),
-                Qt.AlignHCenter | Qt.AlignTop,
-                d["label"]
-            )
+            label_rect = QRectF(group_center - group_w * 0.45, h - padding_bottom + 8, group_w * 0.9, 20)
+            p.drawText(label_rect, Qt.AlignHCenter | Qt.AlignTop, d["label"])
 
-        # 图例
+        # 图例（右上角，更紧凑）
+        legend_y = 8
+        legend_font = QFont(T.FONT_BODY, 12)
+        p.setFont(legend_font)
+
         p.setPen(Qt.NoPen)
         p.setBrush(QColor(T.GOLD))
-        p.drawRoundedRect(QRectF(w - 180, 8, 14, 14), 3, 3)
+        p.drawRoundedRect(QRectF(w - 165, legend_y, 12, 12), 3, 3)
         p.setPen(QColor(T.TEXT_DIM))
-        p.drawText(QRectF(w - 162, 6, 50, 18), Qt.AlignVCenter, "录入")
+        p.drawText(QRectF(w - 149, legend_y - 2, 36, 16), Qt.AlignVCenter, "录入")
 
-        p.setBrush(QColor(T.SAGE))
-        p.drawRoundedRect(QRectF(w - 100, 8, 14, 14), 3, 3)
+        p.setPen(Qt.NoPen)
+        p.setBrush(QColor("#5b9ec4"))
+        p.drawRoundedRect(QRectF(w - 92, legend_y, 12, 12), 3, 3)
         p.setPen(QColor(T.TEXT_DIM))
-        p.drawText(QRectF(w - 82, 6, 50, 18), Qt.AlignVCenter, "复习")
+        p.drawText(QRectF(w - 76, legend_y - 2, 36, 16), Qt.AlignVCenter, "复习")
 
         p.end()
 

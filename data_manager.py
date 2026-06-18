@@ -57,6 +57,15 @@ def save_phrases(phrases):
     _write_json(PHRASES_FILE, phrases)
 
 
+def find_duplicate_phrase(text):
+    """检查相同文本的词组是否已存在，返回词组 dict 或 None"""
+    text_lower = text.strip().lower()
+    for p in get_phrases():
+        if p["phrase"].strip().lower() == text_lower:
+            return p
+    return None
+
+
 def add_phrase(phrase_text, meaning, example="", tags=None):
     """添加一条新词组"""
     phrases = get_phrases()
@@ -232,6 +241,16 @@ def delete_dialogue(dialogue_id):
     _write_json(DIALOGUES_FILE, dialogues)
 
 
+def update_dialogue(dialogue_id, updates):
+    """更新指定对话的字段（如保存翻译）"""
+    dialogues = get_dialogues()
+    for d in dialogues:
+        if d["id"] == dialogue_id:
+            d.update(updates)
+            break
+    _write_json(DIALOGUES_FILE, dialogues)
+
+
 # ============================================================
 # 设置
 # ============================================================
@@ -265,8 +284,8 @@ def sync_to_first_step():
     # 解析路径
     sync_path = settings.get("first_step_data_path", "")
     if not sync_path:
-        # 自动检测同级目录
-        auto_path = os.path.join(os.path.dirname(DATA_DIR), "first-step", "data")
+        # 自动检测同级目录（word-sprout 和 first-step 都在 .project 下）
+        auto_path = os.path.join(os.path.dirname(os.path.dirname(DATA_DIR)), "first-step", "data")
         if os.path.isdir(auto_path):
             sync_path = auto_path
         else:
